@@ -1,0 +1,215 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: voting-app
+  labels:
+    app.kubernetes.io/name: default-deny-all
+    app.kubernetes.io/component: networking
+    app.kubernetes.io/part-of: example-voting-app
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: voting-app
+  labels:
+    app.kubernetes.io/name: allow-dns-egress
+    app.kubernetes.io/component: networking
+    app.kubernetes.io/part-of: example-voting-app
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-frontends
+  namespace: voting-app
+  labels:
+    app.kubernetes.io/name: allow-ingress-to-frontends
+    app.kubernetes.io/component: networking
+    app.kubernetes.io/part-of: example-voting-app
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+              app.kubernetes.io/component: controller
+      ports:
+        - protocol: TCP
+          port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-redis-ingress
+  namespace: voting-app
+  labels:
+    app.kubernetes.io/name: allow-redis-ingress
+    app.kubernetes.io/component: networking
+    app.kubernetes.io/part-of: example-voting-app
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/component: queue
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vote
+              app.kubernetes.io/component: frontend
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: worker
+              app.kubernetes.io/component: processor
+      ports:
+        - protocol: TCP
+          port: 6379
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-ingress
+  namespace: voting-app
+  labels:
+    app.kubernetes.io/name: allow-postgres-ingress
+    app.kubernetes.io/component: networking
+    app.kubernetes.io/part-of: example-voting-app
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+      app.kubernetes.io/component: database
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: worker
+              app.kubernetes.io/component: processor
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: result
+              app.kubernetes.io/component: frontend
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-vote-egress
+  namespace: voting-app
+  labels:
+    app.kubernetes.io/name: allow-vote-egress
+    app.kubernetes.io/component: networking
+    app.kubernetes.io/part-of: example-voting-app
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vote
+      app.kubernetes.io/component: frontend
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+              app.kubernetes.io/component: queue
+      ports:
+        - protocol: TCP
+          port: 6379
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-result-egress
+  namespace: voting-app
+  labels:
+    app.kubernetes.io/name: allow-result-egress
+    app.kubernetes.io/component: networking
+    app.kubernetes.io/part-of: example-voting-app
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: result
+      app.kubernetes.io/component: frontend
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgres
+              app.kubernetes.io/component: database
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-worker-egress
+  namespace: voting-app
+  labels:
+    app.kubernetes.io/name: allow-worker-egress
+    app.kubernetes.io/component: networking
+    app.kubernetes.io/part-of: example-voting-app
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: worker
+      app.kubernetes.io/component: processor
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+              app.kubernetes.io/component: queue
+      ports:
+        - protocol: TCP
+          port: 6379
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgres
+              app.kubernetes.io/component: database
+      ports:
+        - protocol: TCP
+          port: 5432
