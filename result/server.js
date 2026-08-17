@@ -17,9 +17,20 @@ io.on('connection', function (socket) {
   });
 });
 
-var pool = new Pool({
-  connectionString: 'postgres://postgres:postgres@db/postgres'
-});
+var dbConfig = {
+  host: process.env.POSTGRES_HOST || 'db',
+  port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
+  database: process.env.POSTGRES_DB || 'postgres',
+  user: process.env.POSTGRES_USER,
+  password: process.env.POSTGRES_PASSWORD
+};
+
+if (!dbConfig.user || !dbConfig.password) {
+  console.error('POSTGRES_USER and POSTGRES_PASSWORD are required');
+  process.exit(1);
+}
+
+var pool = new Pool(dbConfig);
 
 async.retry(
   {times: 1000, interval: 1000},

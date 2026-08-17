@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote
+  namespace: voting-app
+  labels:
+    app.kubernetes.io/name: vote
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: example-voting-app
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vote
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vote
+        app.kubernetes.io/component: frontend
+        app.kubernetes.io/part-of: example-voting-app
+    spec:
+      imagePullSecrets:
+        - name: registry-credentials
+      containers:
+        - name: vote
+          image: docker.io/ahmadmaen/example-voting-vote:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          env:
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: voting-app-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: voting-app-config
+                  key: REDIS_PORT
+            - name: OPTION_A
+              valueFrom:
+                configMapKeyRef:
+                  name: voting-app-config
+                  key: OPTION_A
+            - name: OPTION_B
+              valueFrom:
+                configMapKeyRef:
+                  name: voting-app-config
+                  key: OPTION_B
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+      terminationGracePeriodSeconds: 30
